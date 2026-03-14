@@ -349,9 +349,9 @@ const SK_TO_DK={ghost:'ghosts',mobileBase:'mobileBases',pillar:'pillars',headBod
 const SUPABASE_URL='https://YOUR_PROJECT.supabase.co';  // TODO: Replace
 const SUPABASE_ANON_KEY='YOUR_ANON_KEY';                 // TODO: Replace
 
-let supabase=null;
+let sb=null;
 try{
-  supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
   console.log('[Supabase] Client initialized');
 }catch(e){console.warn('[Supabase] Init failed:',e);}
 
@@ -363,36 +363,36 @@ let ECN_LOADED=false;
 let EDIT_FIELDS={};
 
 async function loadECNSettings(){
-  if(!supabase){ECN_LOADED=true;return;}
+  if(!sb){ECN_LOADED=true;return;}
   try{
     // Load ECN settings
-    const{data:ecnRow}=await supabase.from('ghost_tracker_ecn_settings').select('settings').eq('id',1).single();
+    const{data:ecnRow}=await sb.from('ghost_tracker_ecn_settings').select('settings').eq('id',1).single();
     if(ecnRow?.settings){const d=ecnRow.settings;Object.keys(d).forEach(k=>{ECN_SETTINGS[k]=new Set(d[k]||[]);});console.log('[ECN] Loaded:',d);}
     ECN_LOADED=true;
 
     // Load edit fields
-    const{data:edRow}=await supabase.from('ghost_tracker_edit_fields').select('settings').eq('id',1).single();
+    const{data:edRow}=await sb.from('ghost_tracker_edit_fields').select('settings').eq('id',1).single();
     if(edRow?.settings){const d=edRow.settings;Object.keys(d).forEach(k=>{EDIT_FIELDS[k]=new Set(d[k]||[]);});console.log('[EDIT] Loaded:',d);}
 
     // Load disabled fields
-    const{data:disRow}=await supabase.from('ghost_tracker_disabled_fields').select('settings').eq('id',1).single();
+    const{data:disRow}=await sb.from('ghost_tracker_disabled_fields').select('settings').eq('id',1).single();
     if(disRow?.settings){const d=disRow.settings;Object.keys(d).forEach(k=>{DISABLED_FIELDS[k]=new Set(d[k]||[]);});console.log('[DISABLED] Loaded:',d);}
   }catch(e){console.warn('[ECN] Load failed:',e);ECN_LOADED=true;}}
 
 async function saveECNSettings(){
-  if(!supabase){showToast('Supabase not available','error');return;}
+  if(!sb){showToast('Supabase not available','error');return;}
   try{
     // Save ECN settings
     const ecnD={};Object.keys(ECN_SETTINGS).forEach(k=>{ecnD[k]=[...ECN_SETTINGS[k]];});
-    await supabase.from('ghost_tracker_ecn_settings').upsert({id:1,settings:ecnD,updated_at:new Date().toISOString()});
+    await sb.from('ghost_tracker_ecn_settings').upsert({id:1,settings:ecnD,updated_at:new Date().toISOString()});
 
     // Save edit fields
     const edD={};Object.keys(EDIT_FIELDS).forEach(k=>{edD[k]=[...EDIT_FIELDS[k]];});
-    await supabase.from('ghost_tracker_edit_fields').upsert({id:1,settings:edD,updated_at:new Date().toISOString()});
+    await sb.from('ghost_tracker_edit_fields').upsert({id:1,settings:edD,updated_at:new Date().toISOString()});
 
     // Save disabled fields
     const disD={};Object.keys(DISABLED_FIELDS).forEach(k=>{disD[k]=[...DISABLED_FIELDS[k]];});
-    await supabase.from('ghost_tracker_disabled_fields').upsert({id:1,settings:disD,updated_at:new Date().toISOString()});
+    await sb.from('ghost_tracker_disabled_fields').upsert({id:1,settings:disD,updated_at:new Date().toISOString()});
 
     console.log('[Settings] Saved ECN+EDIT+DISABLED to Supabase');
   }catch(e){showToast('Save failed: '+e.message,'error');}}
@@ -454,16 +454,16 @@ function togEditField(dk,f){
 let COMP_RULES={latestFW:{},requiredChecks:{},requiredFields:{},requiredECN:{},exactMatch:{},multiMatch:{},dateFresh:{}};
 
 async function loadCompRules(){
-  if(!supabase)return;
-  try{const{data:row}=await supabase.from('ghost_tracker_compliance_rules').select('rules').eq('id',1).single();
+  if(!sb)return;
+  try{const{data:row}=await sb.from('ghost_tracker_compliance_rules').select('rules').eq('id',1).single();
     if(row?.rules){COMP_RULES={latestFW:{},requiredChecks:{},requiredFields:{},requiredECN:{},exactMatch:{},multiMatch:{},dateFresh:{},...row.rules};console.log('[COMP] Loaded:',COMP_RULES);}
   }catch(e){console.warn('[COMP] Load failed:',e);}}
 
 async function saveCompRules(){
-  if(!supabase){showToast('Supabase not available','error');return;}
+  if(!sb){showToast('Supabase not available','error');return;}
   try{
     console.log('[COMP] Saving COMP_RULES:',JSON.stringify(COMP_RULES));
-    await supabase.from('ghost_tracker_compliance_rules').upsert({id:1,rules:COMP_RULES,updated_at:new Date().toISOString()});
+    await sb.from('ghost_tracker_compliance_rules').upsert({id:1,rules:COMP_RULES,updated_at:new Date().toISOString()});
     console.log('[COMP] Save success');
   }catch(e){showToast('Save failed: '+e.message,'error');console.error('[COMP] Save error:',e);}}
 
@@ -860,10 +860,10 @@ function render(){editRegistry=[];compRegistry=[];switch(S.screen){case'login':r
 // ===== LOGIN =====
 function rLogin(){app().innerHTML=`<div class="login-screen"><div class="login-bg"></div><div class="login-card"><div class="logo">👻</div><h1 class="login-title">Ghost Tracker</h1><p class="login-sub">Assembly tracking for Ghost robots.<br>Sign in to access production data.</p><button class="g-btn" onclick="doLogin()"><svg viewBox="0 0 24 24"><path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Sign in with Google</button><div class="login-err" id="loginErr"></div></div></div>${rToast()}`;}
 function doLogin(){
-  if(!supabase){const el=$('#loginErr');if(el){el.textContent='Supabase not ready.';el.style.display='block';}return;}
+  if(!sb){const el=$('#loginErr');if(el){el.textContent='Supabase not ready.';el.style.display='block';}return;}
   // Use Supabase Auth with Google provider (persistent session)
   // Scopes: only email+profile for auth. Sheets access via GIS separately.
-  supabase.auth.signInWithOAuth({
+  sb.auth.signInWithOAuth({
     provider:'google',
     options:{
       redirectTo:window.location.origin+window.location.pathname,
@@ -881,7 +881,7 @@ async function handleSession(session){
 
   // Look up user in shared authentication_mode_user_roles table
   try{
-    const{data:userRow,error}=await supabase
+    const{data:userRow,error}=await sb
       .from('authentication_mode_user_roles')
       .select('name,role')
       .eq('email',email)
@@ -890,7 +890,7 @@ async function handleSession(session){
     if(error||!userRow){
       const el=$('#loginErr');
       if(el){el.textContent=`Access denied.\n${email} not in approved users.`;el.style.display='block';}
-      await supabase.auth.signOut();
+      await sb.auth.signOut();
       S.screen='login';render();return;
     }
 
@@ -912,7 +912,7 @@ async function handleSession(session){
     console.error('[Auth] User lookup failed:',e);
     const el=$('#loginErr');
     if(el){el.textContent='Auth error: '+e.message;el.style.display='block';}
-    await supabase.auth.signOut();
+    await sb.auth.signOut();
     S.screen='login';render();return;
   }
 
@@ -964,7 +964,7 @@ function doLogout(){
   if(accessToken)try{google.accounts.oauth2.revoke(accessToken);}catch{}
   accessToken=null;
   // Sign out of Supabase
-  if(supabase)supabase.auth.signOut();
+  if(sb)sb.auth.signOut();
   currentUser={name:'',email:'',isAdmin:false,isOperator:false,isGuest:false,team:'',role:''};
   S.screen='login';render();
 }
@@ -976,9 +976,9 @@ async function startApp(){S.screen='loading';render();
 
 // ===== INIT =====
 window.onload=function(){render();
-  if(!supabase){console.error('[Init] Supabase not available');return;}
+  if(!sb){console.error('[Init] Supabase not available');return;}
   // Listen for auth state changes (handles redirect callback + session restore)
-  supabase.auth.onAuthStateChange((event,session)=>{
+  sb.auth.onAuthStateChange((event,session)=>{
     console.log('[Auth] State change:',event,session?.user?.email);
     if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='INITIAL_SESSION'){
       if(session)handleSession(session);
@@ -989,7 +989,7 @@ window.onload=function(){render();
     }
   });
   // Check for existing session
-  supabase.auth.getSession().then(({data:{session}})=>{
+  sb.auth.getSession().then(({data:{session}})=>{
     if(session){
       handleSession(session);
     } else {
@@ -1850,7 +1850,7 @@ async function saveSettingsAndBack(){
     await saveECNSettings();
     await saveCompRules();
     // Verify: re-read and compare
-    const{data:verRow}=await supabase.from('ghost_tracker_compliance_rules').select('rules').eq('id',1).single();
+    const{data:verRow}=await sb.from('ghost_tracker_compliance_rules').select('rules').eq('id',1).single();
     if(verRow?.rules){
       const saved=verRow.rules;
       console.log('[Verify] dateFresh saved:',JSON.stringify(saved.dateFresh));
