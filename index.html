@@ -866,7 +866,7 @@ function doComp(id){const c=compRegistry[id];if(!c)return;
 function regFW(field){const id=compRegistry.length;compRegistry.push({action:'fw',dk:'',field});return id;}
 function doFWChange(id,val){const c=compRegistry[id];if(c)setFWRule(c.field,val);}
 
-function render(){editRegistry=[];compRegistry=[];switch(S.screen){case'login':rLogin();break;case'loading':rLoad();break;case'sheetsAuth':rSheetsAuth();break;case'search':rSearch();break;case'result':rResult();break;case'edit':rEdit();break;case'batch':rBatch();break;case'settings':rSettings();break;case'ecnSettings':rSettings();break;case'compSettings':rSettings();break;}}
+function render(){editRegistry=[];compRegistry=[];switch(S.screen){case'login':rLogin();break;case'loading':rLoad();break;case'search':rSearch();break;case'result':rResult();break;case'edit':rEdit();break;case'batch':rBatch();break;case'settings':rSettings();break;case'ecnSettings':rSettings();break;case'compSettings':rSettings();break;}}
 
 // ===== LOGIN =====
 function rLogin(){app().innerHTML=`<div class="login-screen"><div class="login-bg"></div><div class="login-card"><div class="logo">👻</div><h1 class="login-title">Ghost Tracker</h1><p class="login-sub">Assembly tracking for Ghost robots.<br>Sign in to access production data.</p><button class="g-btn" onclick="doLogin()"><svg viewBox="0 0 24 24"><path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Sign in with Google</button><div class="login-err" id="loginErr"></div></div></div>${rToast()}`;}
@@ -939,68 +939,32 @@ function initGISForSheets(){
     callback:r=>{
       if(r.access_token){
         accessToken=r.access_token;
-        localStorage.setItem('gis_token',accessToken);
+        localStorage.setItem('gat',accessToken);
         console.log('[GIS] Got Sheets access token');
-        if(S.screen==='login'||S.screen==='loading'||S.screen==='sheetsAuth'){startApp();}
+        startApp();
       }
     }
   });
-
-  // Step 1: Try cached token from localStorage
-  const cached=localStorage.getItem('gis_token');
-  if(cached){
-    console.log('[GIS] Found cached token, validating...');
-    fetch('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token='+cached)
-      .then(r=>{
-        if(r.ok){
-          accessToken=cached;
-          console.log('[GIS] Cached token valid');
-          startApp();
-        } else {
-          console.log('[GIS] Cached token expired, trying silent refresh...');
-          localStorage.removeItem('gis_token');
-          trySilentRefresh();
-        }
-      })
-      .catch(()=>trySilentRefresh());
-    return;
+  // Check for cached token
+  const cachedToken=localStorage.getItem('gat');
+  if(cachedToken){
+    accessToken=cachedToken;
+    // Validate cached token
+    fetch('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token='+cachedToken)
+      .then(r=>{if(r.ok){console.log('[GIS] Cached token valid');startApp();}
+        else{console.log('[GIS] Cached token expired');localStorage.removeItem('gat');accessToken=null;tokenClient.requestAccessToken({prompt:''});}})
+      .catch(()=>{localStorage.removeItem('gat');accessToken=null;tokenClient.requestAccessToken({prompt:''});});
+  } else {
+    // No cached token — request one (shows Google popup if needed)
+    tokenClient.requestAccessToken({prompt:''});
   }
-
-  // Step 2: No cached token — try silent refresh
-  trySilentRefresh();
-}
-
-function trySilentRefresh(){
-  console.log('[GIS] Attempting silent token refresh...');
-  tokenClient.requestAccessToken({prompt:''});
-  // Fallback: if silent fails after 4s, show Sheets auth prompt
-  setTimeout(()=>{
-    if(!accessToken&&S.screen!=='search'){
-      console.log('[GIS] Silent refresh failed, showing Sheets auth prompt');
-      S.screen='sheetsAuth';render();
-    }
-  },4000);
-}
-
-// Sheets auth screen — shown when GIS silent refresh fails
-function rSheetsAuth(){
-  app().innerHTML=`${rUBar()}<div class="login-screen"><div class="login-bg"></div><div class="login-card">
-    <div class="logo">📊</div>
-    <h1 class="login-title">Sheets Access</h1>
-    <p class="login-sub">Grant access to Google Sheets to load assembly data.<br>This is a one-time step.</p>
-    <button class="g-btn" onclick="promptSheetsAccess()"><svg viewBox="0 0 24 24"><path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Grant Sheets Access</button>
-  </div></div>`;
-}
-function promptSheetsAccess(){
-  if(!tokenClient)return;
-  tokenClient.requestAccessToken();
 }
 
 function doLogout(){
   // Revoke GIS token
   if(accessToken)try{google.accounts.oauth2.revoke(accessToken);}catch{}
   accessToken=null;
-  localStorage.removeItem('gis_token');
+  localStorage.removeItem('gat');
   // Sign out of Supabase
   if(sb)sb.auth.signOut();
   currentUser={name:'',email:'',isAdmin:false,isOperator:false,isGuest:false,team:'',role:''};
@@ -1233,84 +1197,100 @@ function rCompBar(allSecs){
 }
 
 // Render card grid body only (no section header) - used by tab view
+// Uses same 3-column grid layout as batch mode
 function rSCBody(sk,data){
   if(!data||(Array.isArray(data)&&!data.length))return'';
   const c=SC[sk];if(!c)return'';
   const items=Array.isArray(data)?data:[data];if(!items.length)return'';
   const lk=SK_TO_DK[sk]||sk;
+  const dk=lk;
   const sf=getSNField(DATA[lk]||items);
   let h='';
-  items.forEach((item,idx)=>{
-    if(items.length>1)h+=`<div class="fgl" style="color:${c.color}">${esc(item[sf]||'?')}</div>`;
-    const snFs=[],chkFs=[],prodFs=[],emptyFs=[];
-    Object.entries(item).forEach(([k,v])=>{
-      if(shouldSkipField(k))return;
-      if(isECNField(k))return;
-      const val=getV(sk,k);
-      const isChk=val?.type==='checkbox';
-      const isSN=isSNField(k)||k===sf;
-      const comp=checkFieldComp(lk,k,v);
-      const eid=regEdit(sk,item[sf]||'',k,v||'');
-      const fObj={k,v:v||'',label:FIELD_LABELS[k]||k,isChk,isSN,comp,eid,isDr:val?.type==='dropdown',isD:val?.type==='date'};
-      if(isSN)snFs.push(fObj);
-      else if(isChk)chkFs.push(fObj);
-      else if(v)prodFs.push(fObj);
-      else emptyFs.push(fObj);
-    });
 
-    h+=`<div style="padding:5px 4px">`;
-    if(snFs.length){
-      h+=`<div class="cg-grp" style="color:var(--ac)">SERIAL NUMBERS</div>`;
-      h+=`<div class="cg-sn">`;
-      snFs.forEach(f=>{
-        h+=`<div class="cg-card ${f.comp?'cg-card-warn':''}" onclick="doEdit(${f.eid})">
-          <div class="cg-lbl">${esc(f.label)}${f.comp?`<span style="color:var(--red);font-size:7px">⚠</span>`:''}</div>
-          <div class="cg-val cg-val-sn">${esc(f.v||'—')}</div>
-        </div>`;
-      });
-      h+=`</div>`;
-    }
-    if(prodFs.length){
-      h+=`<div class="cg-grp" style="color:var(--grn)">DATA</div>`;
-      h+=`<div class="cg-prod">`;
-      prodFs.forEach(f=>{
-        h+=`<div class="cg-card ${f.comp?'cg-card-warn':''}" onclick="doEdit(${f.eid})">
-          <div class="cg-lbl">${esc(f.label)}${f.isDr?'<span style="color:var(--ac);font-size:7px">▾</span>':''}${f.isD?'<span style="font-size:7px">📅</span>':''}${f.comp?`<span style="color:var(--red);font-size:7px">⚠</span>`:''}</div>
-          <div class="cg-val">${esc(f.v)}</div>
-        </div>`;
-      });
-      h+=`</div>`;
-    }
-    if(chkFs.length){
-      h+=`<div class="cg-grp" style="color:var(--yel)">CHECKS</div>`;
-      h+=`<div class="cg-chks">`;
-      chkFs.forEach(f=>{
-        const p=f.v==='✓'||/^(TRUE|true|1|OK)$/.test(f.v);
-        const col=p?'var(--grn)':'var(--red)';
-        const bg=p?'rgba(52,211,153,.06)':'rgba(248,113,113,.06)';
-        const bd=p?'rgba(52,211,153,.15)':'rgba(248,113,113,.15)';
-        h+=`<div class="cg-chk" style="background:${bg};border:1px solid ${bd}" onclick="doEdit(${f.eid})">
-          <span class="ckd ${p?'ckP':'ckF'}">${p?'✓':'✗'}</span>
-          <span style="font-size:9px;color:${col}">${esc(f.label)}</span>
-          ${f.comp?`<span style="font-size:7px;color:var(--red)">⚠</span>`:''}
-        </div>`;
-      });
-      h+=`</div>`;
-    }
-    if(emptyFs.length){
-      h+=`<div class="cg-grp" style="color:var(--t5)">EMPTY (${emptyFs.length})</div>`;
-      h+=`<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px">`;
-      emptyFs.forEach(f=>{
-        h+=`<div style="padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.02);border:1px solid var(--bd);cursor:pointer;font-size:8px;color:var(--t5);display:flex;align-items:center;gap:3px" onclick="doEdit(${f.eid})">${esc(f.label)}${f.comp?'<span style="color:var(--red)">⚠</span>':''}</div>`;
-      });
-      h+=`</div>`;
-    }
-    h+=`</div>`;
+  items.forEach((item,idx)=>{
+    const itemSN=item[sf]||`Unit ${idx+1}`;
+
+    // Count issues
+    let unitIssues=0;
+    const chkF=[...Object.keys(item).filter(f=>f!=='_rowIdx'&&!shouldSkipField(f)),...Object.keys(item).filter(f=>f!=='_rowIdx'&&isECNField(f))];
+    chkF.forEach(f=>{if(checkFieldComp(dk,f,item[f]))unitIssues++;});
+
+    h+=`<div style="margin-bottom:8px;border:1px solid ${unitIssues?'rgba(248,113,113,.35)':'var(--bd)'};border-radius:10px;overflow:hidden;background:var(--card);${unitIssues?'box-shadow:0 0 12px rgba(248,113,113,.08)':''}">`;
+
+    // Unit header
+    h+=`<div style="padding:8px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bd);background:${unitIssues?'rgba(248,113,113,.04)':c.color+'08'}">
+      <span style="font-size:14px">${c.icon}</span>
+      <span style="font-size:14px;font-weight:700;color:${c.color};font-family:var(--fm)">${esc(itemSN)}</span>
+      ${unitIssues?
+        `<span style="margin-left:auto;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.25)">⚠️ ${unitIssues} issue${unitIssues>1?'s':''}</span>`:
+        `<span style="margin-left:auto;font-size:11px;font-weight:600;color:var(--grn)">✓ OK</span>`}
+    </div>`;
+
+    // 3-column grid — normal + ECN fields
+    h+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--bd)">`;
+    const fields=Object.keys(item).filter(f=>f!=='_rowIdx'&&!shouldSkipField(f));
+    const ecnFields=Object.keys(item).filter(f=>f!=='_rowIdx'&&isECNField(f)&&isECNVisible(dk,f));
+    const allFields=[...fields,...ecnFields];
+    allFields.forEach(f=>{
+      const val=item[f]||'';
+      const label=FIELD_LABELS[f]||f;
+      const isECN=isECNField(f);
+      const vRule=getV(sk,f);
+      const editable=isFieldEditable(dk,f);
+      const isSN=f===sf||/S\/N$/i.test(f);
+      const compIssue=checkFieldComp(dk,f,val);
+      const eid=editable?regEdit(sk,itemSN,f,val):null;
+
+      let valColor='var(--t1)';
+      let bgColor='var(--card)';
+      if(compIssue)bgColor='rgba(248,113,113,.06)';
+      else if(isECN)bgColor='rgba(91,110,234,.04)';
+      if(!val)valColor='var(--t6)';
+      if(isSN)valColor=c.color;
+
+      let displayVal=val;
+      const ruleInfo=getFieldRuleType(dk,f);
+      const effType=ruleInfo.type==='date_fresh'?'date':ruleInfo.type==='checkbox'?'checkbox':vRule?.type||(isECN?guessECNType(sk,f)?.type:null);
+      if(effType==='checkbox'||(!effType&&isECN&&/^(TRUE|FALSE|true|false|1|0|OK|✓|✗|done|no|)$/i.test(val))){
+        const pass=/^(TRUE|true|1|OK|✓|done)$/i.test(val);
+        const fail=/^(FALSE|false|0|✗|no)$/i.test(val);
+        if(pass)displayVal='✓';
+        else if(fail)displayVal='✗';
+        valColor=pass?'var(--grn)':fail?'var(--red)':'var(--t5)';
+      }
+
+      // Date age badge
+      let dateBadge='';
+      if(ruleInfo.type==='date_fresh'&&val){
+        const d=new Date(val.replace(/\//g,'-'));
+        if(!isNaN(d.getTime())){
+          const days=Math.floor((new Date()-d)/(1000*60*60*24));
+          const maxD=parseInt(ruleInfo.value)||60;
+          const overdue=days>maxD;
+          dateBadge=`<span style="font-size:7px;padding:1px 4px;border-radius:3px;background:${overdue?'rgba(248,113,113,.15)':'rgba(52,211,153,.12)'};color:${overdue?'var(--red)':'var(--grn)'};font-weight:700">${days}d${overdue?' ⚠️':''}</span>`;
+        }
+      }
+
+      // Warning reason tag
+      let warnTag='';
+      if(compIssue){
+        warnTag=`<span style="font-size:7px;padding:1px 4px;border-radius:3px;background:rgba(248,113,113,.12);color:var(--red);font-weight:700">⚠️ ${esc(compIssue)}</span>`;
+      }
+
+      h+=`<div style="padding:8px 12px;background:${bgColor};${editable?'cursor:pointer':''}${compIssue?';border-left:3px solid var(--red)':''}" ${editable?`onclick="doEdit(${eid})"`:''}">
+        <div style="font-size:10px;color:var(--t4);margin-bottom:3px;display:flex;align-items:center;gap:3px;flex-wrap:wrap">
+          ${esc(label)}
+          ${editable?'<span style="font-size:8px;color:var(--ac)">✎</span>':''}
+          ${isECN?'<span style="font-size:6px;padding:1px 3px;border-radius:2px;background:var(--ac);color:#fff;font-weight:700">ECN</span>':''}
+          ${dateBadge}
+          ${warnTag}
+        </div>
+        <div style="font-size:13px;font-family:${isSN?'var(--fm)':'inherit'};color:${valColor};font-weight:${isSN||effType==='checkbox'?'700':'500'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${displayVal?esc(displayVal):'<span style="color:var(--t5);font-style:italic">—</span>'}</div>
+      </div>`;
+    });
+    h+=`</div></div>`;
   });
 
-  // ECN
-  const ecnH=rECNSubSectionGrid(sk,items,lk,c);
-  if(ecnH)h+=`<div style="padding:0 4px 5px">${ecnH}</div>`;
   return h;
 }
 
@@ -1630,7 +1610,7 @@ async function saveEdit(){
       tokenClient.callback=r=>{
         if(done)return;done=true;
         tokenClient.callback=origCb;
-        if(r.access_token){accessToken=r.access_token;localStorage.setItem('gis_token',accessToken);resolve();}
+        if(r.access_token){accessToken=r.access_token;localStorage.setItem('gat',accessToken);resolve();}
         else reject(new Error('Re-auth failed'));
       };
       tokenClient.requestAccessToken({prompt:''});
