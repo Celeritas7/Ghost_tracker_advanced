@@ -346,8 +346,8 @@ const SK_TO_DK={ghost:'ghosts',mobileBase:'mobileBases',pillar:'pillars',headBod
 
 // ===== SUPABASE =====
 // ⚠️ REPLACE these with your Supabase project values
-const SUPABASE_URL='https://YOUR_PROJECT.supabase.co';  // TODO: Replace
-const SUPABASE_ANON_KEY='YOUR_ANON_KEY';                 // TODO: Replace
+const SUPABASE_URL='https://wylxvmkcrexwfpjpbhyy.supabase.co';  // TODO: Replace
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5bHh2bWtjcmV4d2ZwanBiaHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MzkxMDYsImV4cCI6MjA4NDIxNTEwNn0.6Bxo42hx4jwlJGWnfjiTpiDUsYfc1QLTN3YtrU1efak';                 // TODO: Replace
 
 let sb=null;
 try{
@@ -409,19 +409,8 @@ function isECNField(f){
   return false;
 }
 
-function getECNFields(dataKey){const rows=DATA[dataKey];if(!rows||!rows.length)return[];
-  const all=Object.keys(rows[0]).filter(f=>f!=='_rowIdx');
-  const ecn=all.filter(f=>isECNField(f));
-  if(!ecn.length&&all.length>5)console.log('[ECN] No ECN fields found in',dataKey,'| All columns:',all.join(', '));
-  return ecn;
-}
-// ECN fields visible by default — only hidden if explicitly disabled
-function isECNVisible(dataKey,field){
-  // Explicitly disabled → hidden
-  if(DISABLED_FIELDS[dataKey]&&DISABLED_FIELDS[dataKey].has(field))return false;
-  // Everything else: visible (auto-ON for new columns)
-  return true;
-}
+function getECNFields(dataKey){const rows=DATA[dataKey];if(!rows||!rows.length)return[];return Object.keys(rows[0]).filter(f=>isECNField(f));}
+function isECNVisible(dataKey,field){return(ECN_SETTINGS[dataKey]&&ECN_SETTINGS[dataKey].has(field))||(EDIT_FIELDS[dataKey]&&EDIT_FIELDS[dataKey].has(field));}
 
 // Explicitly disabled fields (overrides V-rule defaults)
 let DISABLED_FIELDS={};
@@ -1434,25 +1423,19 @@ function rEdit(){const{editing:E,editValue:ev}=S;if(!E)return;const label=FIELD_
   const eType=E._effectiveType!==undefined?E._effectiveType:val?.type;
   const isDr=eType==='dropdown';const isC=eType==='checkbox';const isD=eType==='date';const ch=ev!==E.value&&ev!=='';
   let iH='';
-  if(isDr){
-    const isFW=/FW|firmware/i.test(E.field);
-    const customSelected=ev&&!val.options.includes(ev);
-    iH=`<div style="width:100%;max-width:380px"><div style="font-size:10px;color:var(--t5);font-weight:600;letter-spacing:1px;margin-bottom:8px">SELECT VALUE</div><div style="display:flex;flex-direction:column;gap:4px">${val.options.map(o=>{const s=ev===o,cu=E.value===o;return`<div class="do ${s?'doS':''}" onclick="setEV('${escA(o)}')"><div class="doi"><div class="dor ${s?'dorS':''}">${s?'<div class="dorD"></div>':''}</div><span class="dot ${s?'dotS':''}">${esc(o)}</span></div>${cu?'<span class="doCur">CURRENT</span>':''}</div>`;}).join('')}</div>`
-    +`<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--bd)"><div style="font-size:10px;color:var(--t5);font-weight:600;letter-spacing:1px;margin-bottom:6px">${isFW?'ENTER NEW VERSION':'CUSTOM VALUE'}</div><div style="display:flex;gap:8px;align-items:center"><input type="text" class="etin" id="eti" value="${customSelected?escA(ev):''}" placeholder="${isFW?'e.g. 2.0.2.0':'Type custom value...'}" style="font-size:14px;text-align:left">${customSelected?'<span style="font-size:9px;padding:3px 8px;border-radius:6px;background:rgba(91,110,234,.12);color:var(--ac);font-weight:700;white-space:nowrap">CUSTOM</span>':''}</div></div>`
-    +`</div>`;
-  }
+  if(isDr)iH=`<div style="width:100%;max-width:380px"><div style="font-size:10px;color:var(--t5);font-weight:600;letter-spacing:1px;margin-bottom:8px">SELECT VALUE</div><div style="display:flex;flex-direction:column;gap:4px">${val.options.map(o=>{const s=ev===o,cu=E.value===o;return`<div class="do ${s?'doS':''}" onclick="setEV('${escA(o)}')"><div class="doi"><div class="dor ${s?'dorS':''}">${s?'<div class="dorD"></div>':''}</div><span class="dot ${s?'dotS':''}">${esc(o)}</span></div>${cu?'<span class="doCur">CURRENT</span>':''}</div>`;}).join('')}</div></div>`;
   else if(isC)iH=`<div style="width:100%;max-width:380px"><div style="font-size:10px;color:var(--t5);font-weight:600;letter-spacing:1px;margin-bottom:12px">TOGGLE</div><div style="display:flex;gap:12px">${['✓','✗'].map(v=>{const s=ev===v,p=v==='✓',col=p?'var(--grn)':'var(--red)',bg=p?'rgba(52,211,153,.1)':'rgba(248,113,113,.1)';return`<div style="flex:1;padding:24px 16px;border-radius:14px;cursor:pointer;text-align:center;border:${s?'2px solid '+col:'1px solid var(--bd)'};background:${s?bg:'var(--inp)'}" onclick="setEV('${v}')"><div style="width:56px;height:56px;border-radius:16px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:28px;background:${s?col+'22':'rgba(255,255,255,.03)'};border:2px solid ${s?col:'var(--bd2)'};color:${s?col:'var(--t5)'}">${v}</div><div style="font-size:14px;font-weight:600;color:${s?col:'var(--t4)'}">${p?'Pass':'Fail'}</div></div>`;}).join('')}</div></div>`;
   else if(isD){const dv=(ev||'').replace(/\//g,'-');iH=`<div style="width:100%;max-width:380px"><div style="font-size:10px;color:var(--t5);font-weight:600;letter-spacing:1px;margin-bottom:8px">DATE</div><input type="date" class="edin" id="edi" value="${dv}"><div class="dqb"><button class="dqbb" onclick="setToday()">Today</button><button class="dqbb" onclick="setYest()">Yesterday</button></div></div>`;}
   else iH=`<div style="width:100%;max-width:380px"><div style="font-size:10px;color:var(--t5);font-weight:600;letter-spacing:1px;margin-bottom:8px">NEW VALUE</div><input type="text" class="etin" id="eti" value="${escA(ev)}"></div>`;
   app().innerHTML=`<div class="escreen"><div class="eh"><button class="ecn" onclick="goBack()">Cancel</button><span style="font-size:14px;font-weight:600">Edit Field</span><button class="esv" onclick="saveEdit()">Save ✓</button></div><div class="ebody"><div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;background:${c?c.color+'10':'var(--inp)'};border:1px solid ${c?c.color+'22':'var(--bd)'}"><span>${c?.icon||'📋'}</span><span style="font-size:12px;color:${c?.color||'var(--t3)'};font-weight:600">${c?.label||E.section}</span></div><div style="font-size:11px;color:var(--t5);font-family:var(--fm);margin:6px 0 20px">${esc(E.sn)}</div><div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><span style="font-size:15px;color:#b0b4cc;font-weight:500">${esc(label)}</span></div><div class="eold">${esc(E.value||'empty')}</div>${iH}<button class="savb ${ch?'savA':'savI'}" onclick="saveEdit()">${ch?'Save to Sheet':'No changes'}</button><p style="margin-top:14px;font-size:11px;color:var(--t6);text-align:center">Updates via Google Sheets API</p></div></div>${rToast()}`;
-  const ti=$('#eti');if(ti){ti.addEventListener('input',e=>{S.editValue=e.target.value;const sb2=document.querySelector('.savb');if(sb2){const ch2=S.editValue!==S.editing.value&&S.editValue!=='';sb2.className='savb '+(ch2?'savA':'savI');sb2.textContent=ch2?'Save to Sheet':'No changes';}});ti.addEventListener('keydown',e=>{if(e.key==='Enter')saveEdit();});if(!isDr)setTimeout(()=>ti.focus(),50);}
+  const ti=$('#eti');if(ti){ti.addEventListener('input',e=>{S.editValue=e.target.value;});ti.addEventListener('keydown',e=>{if(e.key==='Enter')saveEdit();});setTimeout(()=>ti.focus(),50);}
   const di=$('#edi');if(di)di.addEventListener('change',e=>{S.editValue=e.target.value.replace(/-/g,'/');});}
 
 function rToast(){if(!S.toast)return'';const hasExch=S.toast.msg.includes('→');return`<div class="toast toast-${S.toast.type}" ${hasExch?'onclick="copyToast()" style="cursor:pointer"':''}>${esc(S.toast.msg)}${hasExch?'<span style="font-size:10px;opacity:.6;margin-left:8px">tap to copy</span>':''}</div>`;}
 function copyToast(){if(!S.toast)return;const t=S.toast.msg.replace(/^✓\s*/,'');navigator.clipboard.writeText(t).then(()=>{S.toast={msg:'📋 Copied!',type:'success'};render();setTimeout(()=>{S.toast=null;render();},1500);});}
 
 // ===== ACTIONS =====
-function doSearch(){if(!S.searchInput.trim())return;const r=traceToGhost(S.searchInput);if(r){S.result=r;S.tree=getGhostTree(r.ghost);const ek=new Set(['ghost']);const mt=r.parsed?.type||'';const ts={ghost:['ghost'],mobileBase:['mobileBase'],pillar:['pillar'],headBody:['headBody'],arm:['arm'],gripper:['gripper'],deployKit:['deployKit'],lMotor:['mbMotors','plMotors'],a12Motor:['armA12'],a35Motor:['armA35'],a4Motor:['armA4'],pdb:['mobileBase'],iob:['headBody','gripper'],mdb:['mbMotors','plMotors','armA12','armA35','armA4'],brk:['pillar'],bat:['arm'],galina:['headBody']};(ts[mt]||[]).forEach(s=>{ek.add(s);ek.add('ecn_'+s);});S.expanded=ek;S.resultTab=(ts[mt]||[])[0]||'ghost';S.screen='result';}else{showToast(`No match for "${S.searchInput}"`,'error');}render();}
+function doSearch(){if(!S.searchInput.trim())return;const r=traceToGhost(S.searchInput);if(r){S.result=r;S.tree=getGhostTree(r.ghost);const ek=new Set(['ghost']);const mt=r.parsed?.type||'';const ts={ghost:['ghost'],mobileBase:['mobileBase'],pillar:['pillar'],headBody:['headBody'],arm:['arm'],gripper:['gripper'],deployKit:['deployKit'],lMotor:['mbMotors','plMotors'],a12Motor:['armA12'],a35Motor:['armA35'],a4Motor:['armA4'],pdb:['mobileBase'],iob:['headBody','gripper'],mdb:['mbMotors','plMotors','armA12','armA35','armA4'],brk:['pillar'],bat:['arm'],galina:['headBody']};(ts[mt]||[]).forEach(s=>ek.add(s));S.expanded=ek;S.resultTab=(ts[mt]||[])[0]||'ghost';S.screen='result';}else{showToast(`No match for "${S.searchInput}"`,'error');}render();}
 function demoScan(){S.scanning=true;render();let d='GT418-GST-00001';if(DATA.ghosts?.length){const f=getSNField(DATA.ghosts);d=DATA.ghosts[0][f]||d;}setTimeout(()=>{S.searchInput=d;S.scanning=false;setTimeout(()=>doSearch(),300);},1800);}
 function setSI(v){S.searchInput=v;S.selectedChip=null;S.chipNum='';S.parsedPreview=parseInput(v);render();}
 function pickChip(id){S.selectedChip=S.selectedChip===id?null:id;S.chipNum='';render();}
@@ -1466,7 +1449,7 @@ function doChipSearch(){
   doSearch();
 }
 function togSec(k){S.expanded.has(k)?S.expanded.delete(k):S.expanded.add(k);render();}
-function selectResultTab(k){S.resultTab=S.resultTab===k?null:k;if(k)S.expanded.add('ecn_'+k);render();}
+function selectResultTab(k){S.resultTab=S.resultTab===k?null:k;render();}
 function toggleDebug(){S.showDebug=!S.showDebug;render();}
 function startEdit(sec,sn,field,value){
   S.editing={section:sec,sn,field,value,_from:S.screen};
