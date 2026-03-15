@@ -939,21 +939,47 @@ function initGISForSheets(){
     callback:r=>{
       if(r.access_token){
         accessToken=r.access_token;
+        localStorage.setItem('gis_token',accessToken);
         console.log('[GIS] Got Sheets access token');
         if(S.screen==='login'||S.screen==='loading'||S.screen==='sheetsAuth'){startApp();}
       }
     }
   });
-  // Try silent token acquisition first
+
+  // Step 1: Try cached token from localStorage
+  const cached=localStorage.getItem('gis_token');
+  if(cached){
+    console.log('[GIS] Found cached token, validating...');
+    fetch('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token='+cached)
+      .then(r=>{
+        if(r.ok){
+          accessToken=cached;
+          console.log('[GIS] Cached token valid');
+          startApp();
+        } else {
+          console.log('[GIS] Cached token expired, trying silent refresh...');
+          localStorage.removeItem('gis_token');
+          trySilentRefresh();
+        }
+      })
+      .catch(()=>trySilentRefresh());
+    return;
+  }
+
+  // Step 2: No cached token — try silent refresh
+  trySilentRefresh();
+}
+
+function trySilentRefresh(){
   console.log('[GIS] Attempting silent token refresh...');
   tokenClient.requestAccessToken({prompt:''});
-  // Fallback: if silent fails after 5s, show Sheets auth prompt
+  // Fallback: if silent fails after 4s, show Sheets auth prompt
   setTimeout(()=>{
     if(!accessToken&&S.screen!=='search'){
       console.log('[GIS] Silent refresh failed, showing Sheets auth prompt');
       S.screen='sheetsAuth';render();
     }
-  },5000);
+  },4000);
 }
 
 // Sheets auth screen — shown when GIS silent refresh fails
@@ -974,6 +1000,7 @@ function doLogout(){
   // Revoke GIS token
   if(accessToken)try{google.accounts.oauth2.revoke(accessToken);}catch{}
   accessToken=null;
+  localStorage.removeItem('gis_token');
   // Sign out of Supabase
   if(sb)sb.auth.signOut();
   currentUser={name:'',email:'',isAdmin:false,isOperator:false,isGuest:false,team:'',role:''};
@@ -1603,7 +1630,7 @@ async function saveEdit(){
       tokenClient.callback=r=>{
         if(done)return;done=true;
         tokenClient.callback=origCb;
-        if(r.access_token){accessToken=r.access_token;resolve();}
+        if(r.access_token){accessToken=r.access_token;localStorage.setItem('gis_token',accessToken);resolve();}
         else reject(new Error('Re-auth failed'));
       };
       tokenClient.requestAccessToken({prompt:''});
