@@ -346,8 +346,8 @@ const SK_TO_DK={ghost:'ghosts',mobileBase:'mobileBases',pillar:'pillars',headBod
 
 // ===== SUPABASE =====
 // ⚠️ REPLACE these with your Supabase project values
-const SUPABASE_URL='https://wylxvmkcrexwfpjpbhyy.supabase.co';  // TODO: Replace
-const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5bHh2bWtjcmV4d2ZwanBiaHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MzkxMDYsImV4cCI6MjA4NDIxNTEwNn0.6Bxo42hx4jwlJGWnfjiTpiDUsYfc1QLTN3YtrU1efak';                 // TODO: Replace
+const SUPABASE_URL='https://YOUR_PROJECT.supabase.co';  // TODO: Replace
+const SUPABASE_ANON_KEY='YOUR_ANON_KEY';                 // TODO: Replace
 
 let sb=null;
 try{
@@ -1987,7 +1987,7 @@ function setDateFresh(dk,f,val){
 }
 // Get current rule type for a field: returns {type, value}
 function getFieldRuleType(dk,f){
-  if((COMP_RULES.latestFW||{})[f])return{type:'fw',value:COMP_RULES.latestFW[f]};
+  if((COMP_RULES.latestFW||{})[f]!==undefined)return{type:'fw',value:COMP_RULES.latestFW[f]};
   if((COMP_RULES.exactMatch?.[dk]||{})[f]!==undefined)return{type:'exact',value:COMP_RULES.exactMatch[dk][f]};
   if((COMP_RULES.multiMatch?.[dk]||{})[f])return{type:'multi',value:(COMP_RULES.multiMatch[dk][f]||[]).join(', ')};
   if((COMP_RULES.dateFresh?.[dk]||{})[f])return{type:'date_fresh',value:String(COMP_RULES.dateFresh[dk][f])};
