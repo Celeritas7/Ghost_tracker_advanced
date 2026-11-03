@@ -6,6 +6,7 @@
 <title>Ghost Assembly Tracker</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://celeritas7.github.io/Akatsuki/js/akatsuki-broadcast.js"></script>
 <style>
 /**
  * Ghost Assembly Tracker — Styles
@@ -347,12 +348,13 @@ const SK_TO_DK={ghost:'ghosts',mobileBase:'mobileBases',pillar:'pillars',headBod
 // ===== SUPABASE =====
 // ⚠️ REPLACE these with your Supabase project values
 const SUPABASE_URL='https://wylxvmkcrexwfpjpbhyy.supabase.co';
-const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5bHh2bWtjcmV4d2ZwanBiaHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2MzkxMDYsImV4cCI6MjA4NDIxNTEwNn0.6Bxo42hx4jwlJGWnfjiTpiDUsYfc1QLTN3YtrU1efak';
+const SUPABASE_ANON_KEY='sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv';
 
 let sb=null;
 try{
   sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
   console.log('[Supabase] Client initialized');
+  if (window.AkatsukiBroadcast) window.AkatsukiBroadcast(sb, 'ghost_tracker').start();
 }catch(e){console.warn('[Supabase] Init failed:',e);}
 
 // ECN visibility settings: {dataKey: Set of visible ECN column names}
